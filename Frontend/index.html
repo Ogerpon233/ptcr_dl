@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTCR缺陷检测系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            font-weight: 600;
+        }
+        
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px 20px;
+            margin: 30px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #f8fafc;
+        }
+        
+        .upload-area:hover {
+            background-color: #e8f4fc;
+            border-color: #2980b9;
+        }
+        
+        .upload-area i {
+            font-size: 48px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            color: #7f8c8d;
+            font-size: 18px;
+        }
+        
+        .file-name {
+            margin-top: 15px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        
+        .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px;
+            font-weight: 500;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        
+        .button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+        }
+        
+        .button:active {
+            transform: translateY(1px);
+        }
+        
+        .button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result-title {
+            font-size: 2.2rem;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .pass {
+            color: #27ae60;
+            background-color: rgba(39, 174, 96, 0.1);
+        }
+        
+        .fail {
+            color: #e74c3c;
+            background-color: rgba(231, 76, 60, 0.1);
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 400px;
+            margin: 30px auto;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+        
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .button {
+                width: 100%;
+                margin: 5px 0;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 主页 -->
+        <div id="home-page" class="page active">
+            <h1>PTCR缺陷检测系统</h1>
+            <div id="upload-area" class="upload-area">
+                <h2>📁</h2>
+                <div class="upload-text">点击或拖拽图片到这里上传</div>
+                <div id="file-name" class="file-name"></div>
+            </div>
+            <input type="file" id="file-input" accept="image/*" hidden>
+            <div class="button-group">
+                <button id="detect-btn" class="button" disabled>开始检测</button>
+            </div>
+            <div id="message" class="message hidden"></div>
+        </div>
+        
+        <!-- 检测中页面 -->
+        <div id="detecting-page" class="page">
+            <h1>PTCR缺陷检测系统</h1>
+            <div class="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px; color: #7f8c8d;">正在检测中，请稍候...</p>
+            </div>
+        </div>
+        
+        <!-- 通过页面 -->
+        <div id="pass-page" class="page">
+            <h1 class="result-title pass">✓ 检测通过</h1>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">该PTCR样品符合质量标准</p>
+            <div class="preview-container">
+                <img id="pass-image" class="preview-image" src="" alt="检测通过图片">
+            </div>
+            <div class="button-group">
+                <button id="pass-home-btn" class="button">返回主页</button>
+                <button id="pass-redetect-btn" class="button">重新检测</button>
+            </div>
+        </div>
+        
+        <!-- 不通过页面 -->
+        <div id="fail-page" class="page">
+            <h1 class="result-title fail">✗ 检测不通过</h1>
+            <p style="color: #7f8c8d; margin-bottom: 20px;">该PTCR样品存在缺陷</p>
+            <div class="preview-container">
+                <img id="fail-image" class="preview-image" src="" alt="检测不通过图片">
+            </div>
+            <div class="button-group">
+                <button id="fail-home-btn" class="button">返回主页</button>
+                <button id="fail-redetect-btn" class="button">重新检测</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面元素
+        const homePage = document.getElementById('home-page');
+        const detectingPage = document.getElementById('detecting-page');
+        const passPage = document.getElementById('pass-page');
+        const failPage = document.getElementById('fail-page');
+        
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileName = document.getElementById('file-name');
+        const detectBtn = document.getElementById('detect-btn');
+        const message = document.getElementById('message');
+        
+        const passImage = document.getElementById('pass-image');
+        const failImage = document.getElementById('fail-image');
+        
+        // 按钮事件
+        const passHomeBtn = document.getElementById('pass-home-btn');
+        const passRedetectBtn = document.getElementById('pass-redetect-btn');
+        const failHomeBtn = document.getElementById('fail-home-btn');
+        const failRedetectBtn = document.getElementById('fail-redetect-btn');
+        
+        // 存储当前上传的文件
+        let currentFile = null;
+        
+        // 页面切换函数
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            page.classList.add('active');
+        }
+        
+        // 显示消息
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.classList.remove('hidden');
+        }
+        
+        // 隐藏消息
+        function hideMessage() {
+            message.classList.add('hidden');
+        }
+        
+        // 上传区域点击事件
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // 文件选择事件
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                currentFile = e.target.files[0];
+                fileName.textContent = `已选择: ${currentFile.name}`;
+                detectBtn.disabled = false;
+                hideMessage();
+                
+                // 预览图片
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    // 存储图片数据用于结果页面显示
+                    passImage.src = event.target.result;
+                    failImage.src = event.target.result;
+                };
+                reader.readAsDataURL(currentFile);
+            }
+        });
+        
+        // 拖拽上传功能
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#e8f4fc';
+            uploadArea.style.borderColor = '#2980b9';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '#f8fafc';
+            uploadArea.style.borderColor = '#3498db';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f8fafc';
+            uploadArea.style.borderColor = '#3498db';
+            
+            if (e.dataTransfer.files.length > 0) {
+                currentFile = e.dataTransfer.files[0];
+                fileName.textContent = `已选择: ${currentFile.name}`;
+                detectBtn.disabled = false;
+                hideMessage();
+                
+                // 预览图片
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    passImage.src = event.target.result;
+                    failImage.src = event.target.result;
+                };
+                reader.readAsDataURL(currentFile);
+            }
+        });
+        
+        // 开始检测按钮事件
+        detectBtn.addEventListener('click', async () => {
+            if (!currentFile) {
+                showMessage('请先选择图片', 'error');
+                return;
+            }
+            
+            // 切换到检测中页面
+            showPage(detectingPage);
+            
+            // API调用
+            try {
+                // 创建FormData对象
+                const formData = new FormData();
+                formData.append('file', currentFile);
+                
+                // 发送到后端API
+                const response = await fetch('http://backend/detect', {   // 暂未编写后端因此使用占位
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('检测请求失败');
+                }
+                
+                const result = await response.json();
+                
+                // 根据结果切换到相应页面
+                if (result.result === 'pass') {
+                    showPage(passPage);
+                } else {
+                    showPage(failPage);
+                }
+                
+            } catch (error) {
+                console.error('检测出错:', error);
+                // 返回主页并显示错误信息
+                showPage(homePage);
+                showMessage('检测失败，请重试', 'error');
+            }
+        });
+        
+        // 返回主页按钮事件
+        passHomeBtn.addEventListener('click', () => {
+            resetHomePage();
+            showPage(homePage);
+        });
+        
+        failHomeBtn.addEventListener('click', () => {
+            resetHomePage();
+            showPage(homePage);
+        });
+        
+        // 重新检测按钮事件
+        passRedetectBtn.addEventListener('click', () => {
+            if (currentFile) {
+                showPage(detectingPage);
+                setTimeout(() => {
+                    // 用于测试，模拟随机结果
+                    if (Math.random() > 0.5) {
+                        showPage(passPage);
+                    } else {
+                        showPage(failPage);
+                    }
+                }, 1500);
+            }
+        });
+        
+        failRedetectBtn.addEventListener('click', () => {
+            if (currentFile) {
+                showPage(detectingPage);
+                setTimeout(() => {
+                    // 用于测试，模拟随机结果
+                    if (Math.random() > 0.5) {
+                        showPage(passPage);
+                    } else {
+                        showPage(failPage);
+                    }
+                }, 1500);
+            }
+        });
+        
+        // 重置主页状态
+        function resetHomePage() {
+            currentFile = null;
+            fileInput.value = '';
+            fileName.textContent = '';
+            detectBtn.disabled = true;
+            hideMessage();
+        }
+    </script>
+</body>
+</html>
