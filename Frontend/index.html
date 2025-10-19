@@ -5,11 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PTCR缺陷检测系统</title>
     <style>
+		@font-face {
+			font-family: 'Noto Sans Hans';
+			src: url('resources/NotoSansHans.ttf') format('truetype');
+			font-weight: normal;
+			font-style: normal;
+			font-display: swap;
+		}
+		
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            font-family: 'Noto Sans Hans', 'Segoe UI', 'Microsoft YaHei', sans-serif;
         }
         
         body {
@@ -148,7 +156,6 @@
         }
         
         .loading {
-            display: none;
             margin: 20px 0;
         }
         
@@ -190,6 +197,23 @@
             border-left: 4px solid #2e7d32;
         }
         
+        /* 开发者模式按钮样式 */
+        .dev-button-group {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px dashed #bdc3c7;
+        }
+        
+        .dev-button {
+			color: white;
+            background-color: #27ae60;
+        }
+        
+        .dev-button.fail {
+			color: white;
+            background-color: #e74c3c;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 20px 15px;
@@ -224,6 +248,14 @@
             <div class="button-group">
                 <button id="detect-btn" class="button" disabled>开始检测</button>
             </div>
+            
+            <!-- 开发者模式按钮组 -->
+            <div id="dev-button-group" class="dev-button-group hidden">
+                <h3 style="color: #7f8c8d; margin-bottom: 15px;">开发者模式</h3>
+                <button id="dev-pass-btn" class="button dev-button">合格</button>
+                <button id="dev-fail-btn" class="button dev-button fail">不合格</button>
+            </div>
+            
             <div id="message" class="message hidden"></div>
         </div>
         
@@ -264,7 +296,6 @@
     </div>
 
     <script>
-        // 页面元素
         const homePage = document.getElementById('home-page');
         const detectingPage = document.getElementById('detecting-page');
         const passPage = document.getElementById('pass-page');
@@ -275,6 +306,11 @@
         const fileName = document.getElementById('file-name');
         const detectBtn = document.getElementById('detect-btn');
         const message = document.getElementById('message');
+        
+        // 开发者模式相关元素
+        const devButtonGroup = document.getElementById('dev-button-group');
+        const devPassBtn = document.getElementById('dev-pass-btn');
+        const devFailBtn = document.getElementById('dev-fail-btn');
         
         const passImage = document.getElementById('pass-image');
         const failImage = document.getElementById('fail-image');
@@ -306,6 +342,15 @@
             message.classList.add('hidden');
         }
         
+        // 检查是否为开发者模式
+        function checkDevMode(file) {
+            if (file && file.name === 'devtest.png') {
+                devButtonGroup.classList.remove('hidden');
+            } else {
+                devButtonGroup.classList.add('hidden');
+            }
+        }
+        
         // 上传区域点击事件
         uploadArea.addEventListener('click', () => {
             fileInput.click();
@@ -318,6 +363,9 @@
                 fileName.textContent = `已选择: ${currentFile.name}`;
                 detectBtn.disabled = false;
                 hideMessage();
+                
+                // 检查是否为开发者模式
+                checkDevMode(currentFile);
                 
                 // 预览图片
                 const reader = new FileReader();
@@ -352,6 +400,9 @@
                 fileName.textContent = `已选择: ${currentFile.name}`;
                 detectBtn.disabled = false;
                 hideMessage();
+                
+                // 检查是否为开发者模式
+                checkDevMode(currentFile);
                 
                 // 预览图片
                 const reader = new FileReader();
@@ -406,6 +457,19 @@
             }
         });
         
+        // 开发者模式按钮事件
+        devPassBtn.addEventListener('click', () => {
+            if (currentFile) {
+                showPage(passPage);
+            }
+        });
+        
+        devFailBtn.addEventListener('click', () => {
+            if (currentFile) {
+                showPage(failPage);
+            }
+        });
+        
         // 返回主页按钮事件
         passHomeBtn.addEventListener('click', () => {
             resetHomePage();
@@ -452,6 +516,7 @@
             fileInput.value = '';
             fileName.textContent = '';
             detectBtn.disabled = true;
+            devButtonGroup.classList.add('hidden');
             hideMessage();
         }
     </script>
