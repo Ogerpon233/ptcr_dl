@@ -37,6 +37,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             padding: 30px;
             text-align: center;
+            position: relative;
         }
         
         h1 {
@@ -175,7 +176,7 @@
         }
         
         .hidden {
-            display: none;
+            display: none !important;
         }
         
         .message {
@@ -205,13 +206,104 @@
         }
         
         .dev-button {
-			color: white;
             background-color: #27ae60;
+            color: white;
         }
         
         .dev-button.fail {
-			color: white;
             background-color: #e74c3c;
+            color: white;
+        }
+        
+        /* 预览链接样式 */
+        .preview-link {
+            color: #3498db;
+            text-decoration: underline;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+        }
+        
+        .preview-link:hover {
+            color: #2980b9;
+        }
+        
+        /* 模态框样式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1;
+        }
+        
+        .modal-content {
+            position: relative;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            z-index: 2;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-content img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 5px;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #7f8c8d;
+            background: none;
+            border: none;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-modal:hover {
+            color: #2c3e50;
         }
         
         @media (max-width: 600px) {
@@ -240,9 +332,12 @@
         <div id="home-page" class="page active">
             <h1>PTCR缺陷检测系统</h1>
             <div id="upload-area" class="upload-area">
-                <h1>📁</h1>
+                <h2>📁</h2>
                 <div class="upload-text">点击或拖拽图片到这里上传</div>
-                <div id="file-name" class="file-name"></div>
+                <div id="file-name" class="file-name">
+                    <span id="file-name-text"></span>
+                    <a id="preview-link" class="preview-link hidden">预览</a>
+                </div>
             </div>
             <input type="file" id="file-input" accept="image/*" hidden>
             <div class="button-group">
@@ -293,7 +388,22 @@
                 <button id="fail-redetect-btn" class="button">重新检测</button>
             </div>
         </div>
+        
+        <!-- 图片预览模态框 -->
+        <div id="preview-modal" class="modal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <button class="close-modal">&times;</button>
+                <img id="modal-image" src="" alt="预览图片">
+            </div>
+        </div>
     </div>
+
+    <!-- 音频元素 -->
+    <audio id="click-sound" preload="auto">
+        <source src="/Resources/click.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
 
     <script>
         const homePage = document.getElementById('home-page');
@@ -304,6 +414,7 @@
         const uploadArea = document.getElementById('upload-area');
         const fileInput = document.getElementById('file-input');
         const fileName = document.getElementById('file-name');
+        const fileNameText = document.getElementById('file-name-text');
         const detectBtn = document.getElementById('detect-btn');
         const message = document.getElementById('message');
         
@@ -311,6 +422,11 @@
         const devButtonGroup = document.getElementById('dev-button-group');
         const devPassBtn = document.getElementById('dev-pass-btn');
         const devFailBtn = document.getElementById('dev-fail-btn');
+        
+        // 预览相关元素
+        const previewLink = document.getElementById('preview-link');
+        const previewModal = document.getElementById('preview-modal');
+        const modalImage = document.getElementById('modal-image');
         
         const passImage = document.getElementById('pass-image');
         const failImage = document.getElementById('fail-image');
@@ -321,8 +437,47 @@
         const failHomeBtn = document.getElementById('fail-home-btn');
         const failRedetectBtn = document.getElementById('fail-redetect-btn');
         
+        // 音频元素
+        const clickSound = document.getElementById('click-sound');
+        
         // 存储当前上传的文件
         let currentFile = null;
+        
+        // 播放点击音效
+        function playClickSound() {
+            // 重置音频以便连续播放
+            clickSound.currentTime = 0;
+            // 播放音频
+            clickSound.play().catch(e => {
+                console.log("音频播放失败:", e);
+            });
+        }
+        
+        // 为所有按钮添加点击音效
+        function addClickSoundToButtons() {
+            // 获取所有按钮元素
+            const buttons = document.querySelectorAll('button');
+            const previewLinks = document.querySelectorAll('.preview-link');
+            
+            // 为所有按钮添加点击音效
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // 如果按钮不是禁用状态，播放音效
+                    if (!button.disabled) {
+                        playClickSound();
+                    }
+                });
+            });
+            
+            // 为预览链接添加点击音效
+            previewLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    playClickSound();
+                });
+            });
+        }
         
         // 页面切换函数
         function showPage(page) {
@@ -351,30 +506,52 @@
             }
         }
         
-        // 上传区域点击事件
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
+        // 显示模态框
+        function showModal(modal) {
+            modal.classList.add('active');
+        }
+        
+        // 隐藏模态框
+        function hideModal(modal) {
+            modal.classList.remove('active');
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(file) {
+            currentFile = file;
+            fileNameText.textContent = `已选择: ${currentFile.name}`;
+            detectBtn.disabled = false;
+            hideMessage();
+            
+            // 检查是否为开发者模式
+            checkDevMode(currentFile);
+            
+            // 显示预览链接
+            previewLink.classList.remove('hidden');
+            
+            // 预览图片
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                // 存储图片数据用于结果页面显示
+                passImage.src = event.target.result;
+                failImage.src = event.target.result;
+                modalImage.src = event.target.result;
+            };
+            reader.readAsDataURL(currentFile);
+        }
+        
+        // 上传区域点击事件 - 简化版，直接触发文件选择
+        uploadArea.addEventListener('click', (e) => {
+            // 确保点击的不是预览链接
+            if (!e.target.classList.contains('preview-link')) {
+                fileInput.click();
+            }
         });
         
         // 文件选择事件
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                currentFile = e.target.files[0];
-                fileName.textContent = `已选择: ${currentFile.name}`;
-                detectBtn.disabled = false;
-                hideMessage();
-                
-                // 检查是否为开发者模式
-                checkDevMode(currentFile);
-                
-                // 预览图片
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    // 存储图片数据用于结果页面显示
-                    passImage.src = event.target.result;
-                    failImage.src = event.target.result;
-                };
-                reader.readAsDataURL(currentFile);
+                handleFileSelect(e.target.files[0]);
             }
         });
         
@@ -396,21 +573,7 @@
             uploadArea.style.borderColor = '#3498db';
             
             if (e.dataTransfer.files.length > 0) {
-                currentFile = e.dataTransfer.files[0];
-                fileName.textContent = `已选择: ${currentFile.name}`;
-                detectBtn.disabled = false;
-                hideMessage();
-                
-                // 检查是否为开发者模式
-                checkDevMode(currentFile);
-                
-                // 预览图片
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    passImage.src = event.target.result;
-                    failImage.src = event.target.result;
-                };
-                reader.readAsDataURL(currentFile);
+                handleFileSelect(e.dataTransfer.files[0]);
             }
         });
         
@@ -427,7 +590,7 @@
             // API调用
             try {
                 // 创建FormData对象
-                const formData = new FormData();
+                const formData = newFormData();
                 formData.append('file', currentFile);
                 
                 // 发送到后端API
@@ -468,6 +631,33 @@
             if (currentFile) {
                 showPage(failPage);
             }
+        });
+        
+        // 预览链接点击事件 - 修复：阻止事件冒泡
+        previewLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // 阻止事件冒泡到上传区域
+            showModal(previewModal);
+        });
+        
+        // 关闭模态框事件
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    hideModal(modal);
+                });
+            });
+        });
+        
+        // 点击模态框背景关闭
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.querySelectorAll('.modal').forEach(modal => {
+                        hideModal(modal);
+                    });
+                }
+            });
         });
         
         // 返回主页按钮事件
@@ -514,12 +704,18 @@
         function resetHomePage() {
             currentFile = null;
             fileInput.value = '';
-            fileName.textContent = '';
+            fileNameText.textContent = '';
+            previewLink.classList.add('hidden'); // 确保预览链接被隐藏
             detectBtn.disabled = true;
             devButtonGroup.classList.add('hidden');
             hideMessage();
         }
+        
+        // 页面加载时确保预览链接是隐藏的，并添加点击音效
+        window.addEventListener('DOMContentLoaded', () => {
+            previewLink.classList.add('hidden');
+            addClickSoundToButtons();
+        });
     </script>
 </body>
-
 </html>
